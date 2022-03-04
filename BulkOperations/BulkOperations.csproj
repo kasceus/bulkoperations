@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<LangVersion>latest</LangVersion>
+		<TargetFrameworks>net6.0;net48</TargetFrameworks>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AssemblyName>WDS.BulkOperations</AssemblyName>
+		<Version>0.0.0.1-a</Version>
+		<Product>Entity Framework Bulk Operations</Product>
+		<Authors>Charles Graham</Authors>
+		<Company>30th Signal BN/ US Army</Company>
+		<Description>Performs Bulk upload, inseert, delete, and select operations from the SQL database</Description>
+		<NeutralLanguage>"en-US"</NeutralLanguage>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<SignAssembly>False</SignAssembly>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+		<EnableNETAnalyzers>true</EnableNETAnalyzers>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<ProduceReferenceAssembly>True</ProduceReferenceAssembly>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="EntityFramework" Version="6.4.4" />
+	  <PackageReference Include="Microsoft.Data.SqlClient" Version="4.1.0" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+	  <PackageReference Include="Microsoft.EntityFrameworkCore">
+	    <Version>6.0.2</Version>
+	  </PackageReference>
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Relational">
+	    <Version>6.0.2</Version>
+	  </PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="ClassInterpretations\" />
+	</ItemGroup>
+
+</Project>
