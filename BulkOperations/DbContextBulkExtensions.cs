@@ -58,10 +58,13 @@ public static class DbContextBulkExtensions
 			{
 				string sqlString = MakeString(forUpload, OperationType.Update, options);
 				await SqlOperations.RunAsync(ctx, sqlString, forUpload.Count);
+				Thread.Sleep(new Random().Next(250, 1000));
 			});
 			tasks.Add(t);
+
 		}
 		Task.WaitAll(tasks.ToArray());
+		System.Diagnostics.Debug.WriteLine(tasks);
 	}
 	/// <summary>
 	/// Update a list of items asynchronously

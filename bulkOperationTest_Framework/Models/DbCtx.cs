@@ -2,6 +2,9 @@ using System.Data.Entity;
 
 namespace bulkOperationTest_Framework.Models
 {
+	/// <summary>
+	///
+	/// </summary>
 	public partial class DbCtx : DbContext
 	{
 		public DbCtx()
@@ -15,6 +18,7 @@ namespace bulkOperationTest_Framework.Models
 
 		protected override void OnModelCreating(DbModelBuilder modelBuilder)
 		{
+
 		}
 	}
 }

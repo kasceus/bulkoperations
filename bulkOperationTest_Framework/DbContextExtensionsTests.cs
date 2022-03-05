@@ -16,52 +16,46 @@ namespace BulkOperations.Tests
 		public async Task BulkUpdateAsyncTestAsync()
 		{
 			using DbCtx db = new();
-			List<BulkTest> records = db.BulkTest.Take(10000).ToList();
+			List<BulkTest> records = db.BulkTest.ToList();
 			DateTime testDate = DateTime.Now;
+			string BigTextField = string.Format("BigTextField Updated at {0}", testDate.ToString());
+			string TextField = string.Format("TextField Updated at {0}", testDate.ToString());
 
-			for (int i = 0; i < 10000; i++)
+			foreach (BulkTest record in records)
 			{
-				int littleStringLength = new Random().Next(50);
-				int bigStringLength = new Random().Next(1000);
-				records.Add(new BulkTest()
-				{
-					TextField = MakeRandomString(littleStringLength),
-					BigTextField = MakeRandomString(bigStringLength)
-				});
+				record.BigTextField = BigTextField;
+				record.TextField = TextField;
 			}
-			//foreach (BulkTest? record in records)
-			//{
-			//	record.BigTextField = string.Format("BigTextField Updated at {0}", testDate.ToString());
-			//	record.TextField = string.Format("TextField Updated at {0}", testDate.ToString());
-			//}
 
 			await db.BulkUpdateAsync(records, options => { options.UseTransactions = false; options.ColumnsToUpdate = new[] { "TextField", "BigTextField" }; });
 
-			Assert.IsTrue(db.BulkTest.Count() == records.Count);
+			Assert.IsTrue(db.BulkTest.Count(a => a.BigTextField.Equals(BigTextField) && a.TextField.Equals(TextField)) == records.Count);
 		}
+		[TestMethod]
 		public async Task BulkInsertAsyncTest()
 		{
 			using DbCtx db = new();
 			List<BulkTest> records = new();
 			db.BulkTest.RemoveRange(db.BulkTest.ToList());//remove all records
 			await db.SaveChangesAsync();
-			for (int i = 0; i < 10000; i++)
+			for (int i = 0; i < 40000; i++)
 			{
-				int littleStringLength = new Random().Next(50);
-				int bigStringLength = new Random().Next(1000);
+				int littleStringLength = new Random().Next(10, 50);
+				int bigStringLength = new Random().Next(30, 1000);
 				records.Add(new BulkTest()
 				{
 					TextField = MakeRandomString(littleStringLength),
 					BigTextField = MakeRandomString(bigStringLength)
 				});
 			}
+			await db.BulkInsertAsync(records);
 			Assert.IsTrue(records.Count == db.BulkTest.Count());
 		}
 		private string MakeRandomString(int length)
 		{
-			string? chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-			char[]? stringChars = new char[length];
-			Random? random = new Random();
+			string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+			char[] stringChars = new char[length];
+			Random random = new();
 
 			for (int i = 0; i < stringChars.Length; i++)
 			{

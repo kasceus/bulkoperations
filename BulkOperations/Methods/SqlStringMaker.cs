@@ -74,6 +74,10 @@ internal static class SqlStringMaker
 		{
 			sb.Append(GetDeleteString(data, options.KeyNames));
 		}
+		else // insert
+		{
+			sb.Append(GetInsertString(data, options));
+		}
 
 		return sb.ToString();
 	}
@@ -114,6 +118,7 @@ internal static class SqlStringMaker
 			throw new ItemPassedAsNullException();
 		}
 		StringBuilder sb = new();
+		sb.AppendLine();
 		sb.Append("when ");
 		for (int i = 0; i < keyNames.Length; i++)
 		{
@@ -130,8 +135,56 @@ internal static class SqlStringMaker
 
 	#endregion
 	#region Insert String Builders
+	private static StringBuilder GetInsertString<T>(IList<T> data, BulkOptions options)
+	{
+		//Insert requires using all columns
+		List<ColumnKeyInfo> columns = GetNonKeyColumnInfo(data, options.KeyNames);
+		//insert string should be : "( column,column,column....) values ('value','value','value'),('value','value',value'),..."
+		StringBuilder sb = new();
+		sb.Append("(");
+		for (int i = 0; i < columns.Count; i++)
+		{
+			sb.Append(columns[i].ColumnName);//append the table-name for the column
+			if (i < columns.Count - 1)
+			{
+				sb.Append(", ");
+			}
+		}
+		sb.Append(") values ");
+		Parallel.ForEach(data, row =>
+		 {
+			 StringBuilder rowString = new();
+			 rowString.Append('(');
+			 //add the data now
+			 for (int i = 0; i < columns.Count; i++)
+			 {
+				 rowString.Append('\'');
+				 rowString.Append(GetColumnValue(row, columns[i].ModelPropName));
+				 if (i < columns.Count - 1)
+				 {
+					 rowString.Append("', ");
+				 }
+				 else
+				 {
+					 rowString.Append('\'');
+				 }
+			 }
+			 rowString.Append("), ");
+			 lock (sb)
+			 {
+				 sb.Append(rowString);
+			 }
+		 });
+		if (sb.Length > 2)
+		{
+			string ret = sb.ToString().Trim();
+			ret = ret.Substring(0, ret.Length - 1);
+			sb.Clear();
+			sb.Append(ret);
+		}
 
-
+		return sb;
+	}
 	#endregion
 
 	#region delete string builders
@@ -160,14 +213,22 @@ internal static class SqlStringMaker
 			stringBuilder.Append(") or ");
 			lock (sb)
 			{
-				sb.Append(stringBuilder.ToString());
+				sb.Append(stringBuilder);
 			}
 		});
 		string? retString = sb.ToString().Trim();
+#if NET6_0_OR_GREATER
+		string? endor = retString[^2..];
+#else
 		string? endor = retString.Substring(retString.Length - 2);
+#endif
 		if (endor.Contains("or"))
 		{
+#if NET6_0_OR_GREATER
+			retString = retString[0..^2];
+#else
 			retString = retString.Substring(0, retString.Length - 2);
+#endif
 		}
 		return retString.Trim();
 	}
@@ -175,11 +236,18 @@ internal static class SqlStringMaker
 
 	public static string GetColumnValue<T>(T item, string columnName)
 	{
-		if (item is null)
+
+		if (item == null || string.IsNullOrWhiteSpace(columnName))
 		{
 			throw new ItemPassedAsNullException();
 		}
-		return item.GetType().GetProperty(columnName).GetValue(item).ToString();
+		PropertyInfo? prop = item.GetType().GetProperty(columnName);
+		if (prop is null)
+		{
+			throw new ItemPassedAsNullException($"Could not get the value for column {columnName}");
+		}
+		string? val = prop.GetValue(item)?.ToString() ?? "";
+		return val;
 	}
 
 	/// <summary>
@@ -197,6 +265,10 @@ internal static class SqlStringMaker
 			throw new ItemPassedAsNullException();
 		}
 		PropertyInfo? key = item.GetType().GetProperty(keyName);
+		if (key is null)
+		{
+			throw new ItemPassedAsNullException($"Could not get the property for {keyName} from the provided item. The key name should be the model name - not the database name for the property.");
+		}
 		string tableKeyName;
 		if (key.GetCustomAttribute(typeof(ColumnAttribute)) is ColumnAttribute column && !string.IsNullOrWhiteSpace(column.Name))
 		{ //the table key name might be different than the class name get that here
@@ -206,7 +278,7 @@ internal static class SqlStringMaker
 		{
 			tableKeyName = keyName;
 		}
-		string keyValue = key.GetValue(item).ToString();
+		string keyValue = key.GetValue(item)?.ToString() ?? "";
 
 		return Tuple.Create(tableKeyName, keyValue);
 	}

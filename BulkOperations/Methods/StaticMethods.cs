@@ -64,11 +64,16 @@ internal static class StaticMethods
 		{
 			throw new ItemPassedAsNullException();
 		}
-		IEnumerable<PropertyInfo>? columns = item.GetType().GetProperties().AsEnumerable();
+		IEnumerable<PropertyInfo> columns = item.GetType().GetProperties().AsEnumerable();
 		List<ColumnKeyInfo> cols = new();
 		foreach (PropertyInfo? property in columns)
 		{
-			if (property.GetMethod.IsVirtual || typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
+			if (property is null)
+			{
+				throw new ItemPassedAsNullException("Could not find the property in the provided item");
+			}
+			bool isEnumerable = typeof(IList).IsAssignableFrom(property.PropertyType) || typeof(ICollection).IsAssignableFrom(property.PropertyType);
+			if (property.GetMethod is null || property.GetMethod.IsVirtual || isEnumerable)
 			{ // ignore virtual types and ienumerable types
 				continue;
 			}

@@ -64,18 +64,14 @@ internal static class SqlOperations
 		SqlConnection? conn = new(context.Database.Connection.ConnectionString);
 		await conn.OpenAsync();
 		SqlTransaction? trans = conn.BeginTransaction();
+
 		try
 		{
+			//TODO: get with eugene to see what's actually bein executed here so i know why it's nullifying records
 			SqlCommand sqlCommand = new(SqlString, conn, trans);
-			int changed = await sqlCommand.ExecuteNonQueryAsync();
-			if (changed == totalRecords)
-			{
-				trans.Commit();
-			}
-			else
-			{
-				throw new RecordCountMismatchException();
-			}
+			sqlCommand.CommandTimeout = 500;
+			await sqlCommand.ExecuteNonQueryAsync();
+			trans.Commit();
 		}
 		catch
 		{

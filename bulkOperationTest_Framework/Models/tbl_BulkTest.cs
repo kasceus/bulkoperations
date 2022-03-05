@@ -6,13 +6,20 @@ namespace bulkOperationTest_Framework.Models
 	[Table("tbl_BulkTest")]
 	public partial class BulkTest
 	{
+		/// <summary>
+		///
+		/// </summary>
+		public BulkTest()
+		{
+
+		}
 		[Key]
 		[Column("Id")]
-		public int KeyField { get; set; }
+		public int KeyField { get; set; } = default!;
 
 		[StringLength(50)]
-		public string TextField { get; set; }
+		public string TextField { get; set; } = default!;
 
-		public string BigTextField { get; set; }
+		public string BigTextField { get; set; } = default!;
 	}
 }

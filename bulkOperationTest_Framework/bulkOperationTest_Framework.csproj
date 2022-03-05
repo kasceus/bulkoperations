@@ -3,7 +3,6 @@
   <PropertyGroup>
 	  <LangVersion>latest</LangVersion>
     <TargetFramework>net48</TargetFramework>
-    <Nullable>enable</Nullable>
 
     <IsPackable>false</IsPackable>
   </PropertyGroup>
