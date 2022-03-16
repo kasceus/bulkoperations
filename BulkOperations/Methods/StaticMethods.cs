@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
@@ -77,6 +78,19 @@ internal static class StaticMethods
 			{ // ignore virtual types and ienumerable types
 				continue;
 			}
+			if (property.GetCustomAttribute(typeof(DatabaseGeneratedAttribute)) is DatabaseGeneratedAttribute databaseGeneratedAttribute && (databaseGeneratedAttribute.DatabaseGeneratedOption.HasFlag(DatabaseGeneratedOption.Identity) || databaseGeneratedAttribute.DatabaseGeneratedOption.HasFlag(DatabaseGeneratedOption.Computed)))
+			{
+				//don't return computed columns
+				continue;
+			}
+			if(property.SetMethod==null || !property.SetMethod.IsPublic || (property.GetCustomAttribute(typeof(ReadOnlyAttribute))is ReadOnlyAttribute attr && attr.IsReadOnly))
+            {
+				continue;//don't add readonly attributes
+            }
+			if(property.GetCustomAttribute(typeof(NotMappedAttribute)) is NotMappedAttribute)
+            {
+				continue;//item not mapped to a database column, don't add it
+            }
 			ColumnKeyInfo columnInfo = new()
 			{
 				ModelPropName = property.Name,
@@ -119,6 +133,11 @@ internal static class StaticMethods
 				ModelPropName = prop.Name,
 				ColumnName = prop.Name,
 			};
+			if(prop.GetCustomAttribute(typeof(DatabaseGeneratedAttribute)) is DatabaseGeneratedAttribute databaseGeneratedAttribute && (databaseGeneratedAttribute.DatabaseGeneratedOption.HasFlag(DatabaseGeneratedOption.Identity) ||databaseGeneratedAttribute.DatabaseGeneratedOption.HasFlag(DatabaseGeneratedOption.Computed)))
+            {
+				//don't return computed columns
+				continue;
+            }
 			if (prop.GetCustomAttribute(typeof(ColumnAttribute)) is ColumnAttribute columnAttribute && !string.IsNullOrWhiteSpace(columnAttribute.Name))
 			{
 				columnInfo.ColumnName = columnAttribute.Name;

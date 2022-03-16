@@ -2,15 +2,15 @@
 
 	<PropertyGroup>
 		<LangVersion>latest</LangVersion>
-		<TargetFrameworks>net6.0;net48</TargetFrameworks>
+		<TargetFrameworks>net48</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AssemblyName>WDS.BulkOperations</AssemblyName>
-		<Version>0.0.0.1-a</Version>
+		<Version>1.0.0.4</Version>
 		<Product>Entity Framework Bulk Operations</Product>
 		<Authors>Charles Graham</Authors>
 		<Company>30th Signal BN/ US Army</Company>
-		<Description>Performs Bulk upload, inseert, delete, and select operations from the SQL database</Description>
+		<Description>Performs Bulk upload, insert, delete, and select operations from the SQL database</Description>
 		<NeutralLanguage>"en-US"</NeutralLanguage>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<SignAssembly>False</SignAssembly>
@@ -22,21 +22,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="EntityFramework" Version="6.4.4" />
-	  <PackageReference Include="Microsoft.Data.SqlClient" Version="4.1.0" />
-	</ItemGroup>
-
-	<ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
-	  <PackageReference Include="Microsoft.EntityFrameworkCore">
-	    <Version>6.0.2</Version>
-	  </PackageReference>
-	  <PackageReference Include="Microsoft.EntityFrameworkCore.Relational">
-	    <Version>6.0.2</Version>
-	  </PackageReference>
+	  <Compile Remove="ClassInterpretations\**" />
+	  <EmbeddedResource Remove="ClassInterpretations\**" />
+	  <None Remove="ClassInterpretations\**" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="ClassInterpretations\" />
+	  <PackageReference Include="EntityFramework" Version="6.4.4" />
+	  <PackageReference Include="Microsoft.Data.SqlClient" Version="4.1.0" />
 	</ItemGroup>
 
 </Project>

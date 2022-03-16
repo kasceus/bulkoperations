@@ -21,5 +21,6 @@ namespace bulkOperationTest_Framework.Models
 		public string TextField { get; set; } = default!;
 
 		public string BigTextField { get; set; } = default!;
+		public string RandomFiled { get; set; }= default!;
 	}
 }
