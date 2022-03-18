@@ -1,6 +1,7 @@
 ﻿using BulkOperations.Exceptions;
 using BulkOperations.Models;
 
+using System;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
 using System.Text;
@@ -11,50 +12,165 @@ namespace BulkOperations.Methods;
 
 internal static class SqlStringMaker
 {
-    internal static string MakeString<T>(IList<T> data, OperationType operationType, BulkOptions options)
+    internal static string MakeInsertString<T>(IList<T> data, BulkOptions options, int iteration)
     {
+        string tempTable = $"#tempInsert{iteration}";
+        StringBuilder sb = new();
+        var single = data.FirstOrDefault();
+        if (single == null)
+        {
+            throw new ArgumentNullException(nameof(data));
+        }
+        string tableName;
+        if (single.GetType().GetCustomAttribute(typeof(TableAttribute)) is TableAttribute table)
+        {
+            tableName = table.Name;
+        }
+        else
+        {
+            tableName = single.GetType().Name;
+        }
+        List<ColumnKeyInfo> columns = GetNonKeyColumnInfo(data, options.KeyNames, options.IndexValues);
+        if (options.InsertKey)
+        {//if the key is insertable then pass it here to the columns that need to be built
+            var keyColumns = GetSpecifiedColumnInfo(data, options.KeyNames);
+            foreach (var column in keyColumns)
+            {
+                if (!columns.Exists(a => a.ColumnName == column.ColumnName))
+                {
+                    columns.Add(column);
+                }
+            }
+        }
+        sb.Append($"select top (1) * into {tempTable} from {tableName}; delete from {tempTable};").AppendLine();
+        sb.Append($" Insert into {tempTable}").AppendLine();
+        sb.Append(GetInsertString(data, columns.ToList()));
+        //temp table should have all the data inserted here. now need to merge the temp table and the actual table
+        sb.Append(';')
+            .AppendLine()
+            .Append($"insert into {tableName} (");
+        for (var i = 0; i < columns.Count; i++)
+        {
+            sb.Append(columns.ElementAt(i).ModelPropName);
+            if (i < columns.Count - 1)
+            {
+                sb.Append(',');
+            }
+        }
+        sb.Append(") select ");
+        for (var i = 0; i < columns.Count; i++)
+        {
+            sb.Append(columns.ElementAt(i).ModelPropName);
+            if (i < columns.Count - 1)
+            {
+                sb.Append(',');
+            }
+        }
+        sb.Append($" from {tempTable}")
+            .AppendLine()
+            .Append("where not exists (select distinct ");
+
+        for (var i = 0; i < columns.Count; i++)
+        {
+            sb.Append(columns.ElementAt(i).ModelPropName);
+            if (i < columns.Count - 1)
+            {
+                sb.Append(',');
+            }
+        }
+        sb.Append($" from {tableName} t1 where ");
+
+        if (options.IndexValues.Length == 0)
+        {
+            for (var i = 0; i < columns.Count; i++)
+            {
+                if (options.ColumnsToIgnore.Contains(columns.ElementAt(i).ModelPropName))
+                {
+                    continue;
+                }
+                sb.Append($"[{tempTable}].[{columns.ElementAt(i).ModelPropName}] = t1.[{columns.ElementAt(i).ModelPropName}]");
+                if (i < columns.Count - 1)
+                {
+                    sb.Append(" and ");
+                }
+            }
+        }
+        else
+        {
+            var indexInfo = GetSpecifiedColumnInfo(data, options.IndexValues);
+            for (var i = 0; i < indexInfo.Count; i++)
+            {
+                if (options.ColumnsToIgnore.Contains(indexInfo[i].ModelPropName))
+                {
+                    continue;
+                }
+                sb.Append($"[{tempTable}].[{indexInfo[i].ModelPropName}] = t1.[{indexInfo[i].ModelPropName}]");
+                if (i < indexInfo.Count - 1)
+                {
+                    sb.Append(" and ");
+                }
+            }
+        }
+
+        sb.Append($");").AppendLine().Append($"DROP table {tempTable}");
+        return sb.ToString();
+    }
+
+    internal static string MakeString<T>(IList<T> data, OperationType operationType, BulkOptions options, int iteration)
+    {
+
         if (data is null || data.Count == 0)
         {
             throw new ArgumentNullException(nameof(data));
         }
-        StringBuilder sb = new();
-        sb.Append(operationType.ToString());
-        switch (operationType)
+        //fill in any missing options values
+        if (options.IndexValues == null)
         {
-            case OperationType.Delete:
-                sb.Append(" from");
-                break;
-            case OperationType.Insert:
-                sb.Append(" into");
-                break;
-            case OperationType.Update:
-            default:
-                break;
+            options.IndexValues = GetIndexes(data, options).Result;
         }
-#pragma warning disable CS8602 // Dereference of a possibly null reference. This should never be null if it gets here
-        switch (data.First().GetType().GetCustomAttribute(typeof(TableAttribute)))
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
-        {
-            case TableAttribute tableAttribute:
-                sb.Append(' ').Append(tableAttribute.Name);
-                break;
-            default:
-                sb.Append(' ').Append(data.GetType().Name);
-                break;
-        }
-        sb.Append(' ');//space separator between command initializer and the rest of the sequence
         if (!options.KeyNames.Any())
         {
             options.KeyNames = GetKeys(data).Result;
         }
         if (options.ColumnsToUpdate == null || options.ColumnsToUpdate.Length == 0)
         {
-            options.ColumnValues = GetNonKeyColumnInfo(data, options.KeyNames);
+            options.ColumnValues = GetNonKeyColumnInfo(data, options.KeyNames, options.IndexValues);
         }
         else
         {
             options.ColumnValues = GetSpecifiedColumnInfo(data, options.ColumnsToUpdate);
         }
+        if (operationType == OperationType.Insert)
+        {
+            return MakeInsertString(data, options, iteration);
+        }
+        StringBuilder sb = new();
+        sb.Append(operationType.ToString());
+        if (operationType == OperationType.Delete)
+        {
+            sb.Append(" from");
+        }
+
+        var single = data.FirstOrDefault();
+        if (single == null)
+        {
+            throw new ArgumentNullException(nameof(data));
+        }
+        string tableName;
+        if (single.GetType().GetCustomAttribute(typeof(TableAttribute)) is TableAttribute table)
+        {
+            tableName = table.Name;
+        }
+        else
+        {
+            tableName = single.GetType().Name;
+        }
+
+        sb.Append(' ').Append(tableName);
+
+
+        sb.Append(' ');//space separator between command initializer and the rest of the sequence
+
         if (operationType == OperationType.Update)
         {
             bool first = true;
@@ -91,11 +207,6 @@ internal static class SqlStringMaker
         {
             sb.Append(GetDeleteString(data, options.KeyNames));
         }
-        else // insert
-        {
-            sb.Append(GetInsertString(data, options));
-        }
-
         return sb.ToString();
     }
     #region Update string builders
@@ -167,18 +278,11 @@ internal static class SqlStringMaker
 
     #endregion
     #region Insert String Builders
-    private static StringBuilder GetInsertString<T>(IList<T> data, BulkOptions options)
+    private static StringBuilder GetInsertString<T>(IList<T> data, List<ColumnKeyInfo> columns)
     {
-        //Insert requires using all columns
-        List<ColumnKeyInfo> columns = GetNonKeyColumnInfo(data, options.KeyNames);
-        if (options.InsertKey)
-        {//if the key is insertable then pass it here to the columns that need to be built
-            var keyColumns=GetSpecifiedColumnInfo(data, options.KeyNames);       
-            columns.AddRange(keyColumns);
-        }
         //insert string should be : "( column,column,column....) values ('value','value','value'),('value','value',value'),..."
         StringBuilder sb = new();
-        sb.Append("(");
+        sb.Append('(');
         for (int i = 0; i < columns.Count; i++)
         {
             sb.Append(columns[i].ColumnName);//append the table-name for the column
@@ -256,11 +360,11 @@ internal static class SqlStringMaker
         });
         string? retString = sb.ToString().Trim();
 
-		string? endor = retString.Substring(retString.Length - 2);
+        string? endor = retString.Substring(retString.Length - 2);
 
         if (endor.Contains("or"))
         {
-			retString = retString.Substring(0, retString.Length - 2);
+            retString = retString.Substring(0, retString.Length - 2);
         }
         return retString.Trim();
     }
@@ -278,7 +382,7 @@ internal static class SqlStringMaker
             throw new ItemPassedAsNullException($"Could not get the value for column {columnName}");
         }
         string? val = prop.GetValue(item)?.ToString() ?? "";
-        return val.Replace("'","''");//sanitize the value
+        return val.Replace("'", "''");//sanitize the value
     }
 
     /// <summary>

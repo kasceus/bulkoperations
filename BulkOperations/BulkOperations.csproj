@@ -6,11 +6,11 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AssemblyName>WDS.BulkOperations</AssemblyName>
-		<Version>1.0.0.4</Version>
+		<Version>1.0.0.7</Version>
 		<Product>Entity Framework Bulk Operations</Product>
 		<Authors>Charles Graham</Authors>
 		<Company>30th Signal BN/ US Army</Company>
-		<Description>Performs Bulk upload, insert, delete, and select operations from the SQL database</Description>
+		<Description>Performs Bulk upload, insert, and delete operations from the SQL database</Description>
 		<NeutralLanguage>"en-US"</NeutralLanguage>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<SignAssembly>False</SignAssembly>

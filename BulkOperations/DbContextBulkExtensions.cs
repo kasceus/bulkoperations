@@ -5,7 +5,7 @@ using BulkOperations.Models;
 using static BulkOperations.Methods.SqlStringMaker;
 
 using System.Data.Entity;
-
+using System.Diagnostics;
 
 namespace BulkOperations;
 /// <summary>
@@ -13,6 +13,7 @@ namespace BulkOperations;
 /// </summary>
 public static class DbContextBulkExtensions
 {
+    private static int iteration = 0;
     #region Async Methods
     #region Update
     /// <summary>
@@ -25,6 +26,10 @@ public static class DbContextBulkExtensions
     /// <returns></returns>
     public static async Task BulkUpdateAsync<T>(this DbContext ctx, IList<T> data, Action<BulkOptions> bulkOptions)
     {
+        if (data.Count == 0)
+        {
+            return;
+        }
         BulkOptions options = new();
         bulkOptions?.Invoke(options);
         if (options.KeyNames == null)
@@ -53,14 +58,15 @@ public static class DbContextBulkExtensions
             Task t = Task.Run(async () =>
             {
                 Thread.Sleep(new Random().Next(250, 1000));//add random sleep so the concurrent operations don't lock up the database
-                string sqlString = MakeString(forUpload, OperationType.Update, options);
-                await SqlOperations.RunAsync(ctx, sqlString, forUpload.Count);
+                string sqlString = MakeString(forUpload, OperationType.Update, options, iteration);
+                SqlOperations sql = new();
+                await sql.RunAsync(ctx, sqlString, forUpload.Count);
             });
             tasks.Add(t);
-
+            iteration++;
         }
         Task.WaitAll(tasks.ToArray());
-        System.Diagnostics.Debug.WriteLine(tasks);
+        return;
     }
     /// <summary>
     /// Update a list of items asynchronously
@@ -71,6 +77,10 @@ public static class DbContextBulkExtensions
     /// <returns></returns>
     public static async Task BulkUpdateAsync<T>(this DbContext ctx, IList<T> data)
     {
+        if (data.Count == 0)
+        {
+            return;
+        }
         string[]? KeyNames = await GetKeys(data);
         await BulkUpdateAsync(ctx, data, option => option.KeyNames = KeyNames);
     }
@@ -87,6 +97,11 @@ public static class DbContextBulkExtensions
     /// <returns></returns>
     public static async Task BulkInsertAsync<T>(this DbContext ctx, IList<T> data, Action<BulkOptions> bulkOptions)
     {
+
+        if (data.Count == 0)
+        {
+            return;
+        }
         BulkOptions options = new();
         bulkOptions?.Invoke(options);
         if (options.KeyNames == null)
@@ -114,12 +129,23 @@ public static class DbContextBulkExtensions
             }
             Task t = Task.Run(async () =>
             {
-                string sqlString = MakeString(forInsert, OperationType.Insert, options);
-                await SqlOperations.RunAsync(ctx, sqlString, forInsert.Count);
+                string sqlString = MakeString(forInsert, OperationType.Insert, options, iteration);
+                try
+                {
+                    SqlOperations sql = new();
+                    await sql.RunAsync(ctx, sqlString, forInsert.Count);                    
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
             });
             tasks.Add(t);
+            iteration++;
         }
+
         Task.WaitAll(tasks.ToArray());
+        return;
     }/// <summary>
      /// Performs bulk insert or records into the database.
      /// </summary>
@@ -129,6 +155,10 @@ public static class DbContextBulkExtensions
      /// <returns></returns>
     public static async Task BulkInsertAsync<T>(this DbContext ctx, IList<T> data)
     {
+        if (data.Count == 0)
+        {
+            return;
+        }
         string[]? keys = await GetKeys(data);
         await BulkInsertAsync(ctx, data, options => options.KeyNames = keys);
     }
@@ -144,6 +174,11 @@ public static class DbContextBulkExtensions
     /// <returns></returns>
     public static async Task BulkDeleteAsync<T>(this DbContext ctx, IList<T> data, Action<BulkOptions> bulkOptions)
     {
+
+        if (data.Count == 0)
+        {
+            return;
+        }
         BulkOptions options = new();
         bulkOptions?.Invoke(options);
         if (options.KeyNames == null)
@@ -171,10 +206,12 @@ public static class DbContextBulkExtensions
             }
             Task t = Task.Run(async () =>
             {
-                string sqlString = MakeString(forDelete, OperationType.Delete, options);
-                await SqlOperations.RunAsync(ctx, sqlString, forDelete.Count);
+                string sqlString = MakeString(forDelete, OperationType.Delete, options, iteration);
+                SqlOperations sql = new();
+                await sql.RunAsync(ctx, sqlString, forDelete.Count);
             });
             tasks.Add(t);
+            iteration++;
         }
         Task.WaitAll(tasks.ToArray());
     }/// <summary>
@@ -186,6 +223,10 @@ public static class DbContextBulkExtensions
      /// <returns></returns>
     public static async Task BulkDeleteAsync<T>(this DbContext ctx, IList<T> data)
     {
+        if (data.Count == 0)
+        {
+            return;
+        }
         string[]? keys = await GetKeys(data);
         await BulkDeleteAsync(ctx, data, options => options.KeyNames = keys);
     }
@@ -203,6 +244,11 @@ public static class DbContextBulkExtensions
     /// <returns></returns>
     public static void BulkUpdate<T>(this DbContext ctx, IList<T> data, Action<BulkOptions> bulkOptions)
     {
+
+        if (data.Count == 0)
+        {
+            return;
+        }
         BulkOptions options = new();
         bulkOptions?.Invoke(options);
         if (options.KeyNames == null)
@@ -231,14 +277,14 @@ public static class DbContextBulkExtensions
             Task t = Task.Run(async () =>
             {
                 Thread.Sleep(new Random().Next(250, 1000));//add random sleep so the concurrent operations don't lock up the database
-                string sqlString = MakeString(forUpload, OperationType.Update, options);
-                await SqlOperations.RunAsync(ctx, sqlString, forUpload.Count);
+                string sqlString = MakeString(forUpload, OperationType.Update, options, iteration);
+                SqlOperations sql = new();
+                await sql.RunAsync(ctx, sqlString, forUpload.Count);
             });
             tasks.Add(t);
-
+            iteration++;
         }
         Task.WaitAll(tasks.ToArray());
-        System.Diagnostics.Debug.WriteLine(tasks);
     }
     /// <summary>
     /// Update a list of items asynchronously
@@ -249,6 +295,10 @@ public static class DbContextBulkExtensions
     /// <returns></returns>
     public static void BulkUpdate<T>(this DbContext ctx, IList<T> data)
     {
+        if (data.Count == 0)
+        {
+            return;
+        }
         string[]? KeyNames = GetKeys(data).Result;
         BulkUpdate(ctx, data, option => option.KeyNames = KeyNames);
     }
@@ -262,8 +312,13 @@ public static class DbContextBulkExtensions
     /// <param name="data"></param>
     /// <param name="bulkOptions"></param>
     /// <returns></returns>
-    public static void BulkInsert<T>(this DbContext ctx, IList<T> data, Action<BulkOptions> bulkOptions)
+    public static bool BulkInsert<T>(this DbContext ctx, IList<T> data, Action<BulkOptions> bulkOptions)
     {
+
+        if (data.Count == 0)
+        {
+            return true;
+        }
         BulkOptions options = new();
         bulkOptions?.Invoke(options);
         if (options.KeyNames == null)
@@ -291,12 +346,16 @@ public static class DbContextBulkExtensions
             }
             Task t = Task.Run(async () =>
             {
-                string sqlString = MakeString(forInsert, OperationType.Insert, options);
-                await SqlOperations.RunAsync(ctx, sqlString, forInsert.Count);
+                Thread.Sleep(new Random().Next(250, 1000));//add random sleep so the concurrent operations don't lock up the database
+                string sqlString = MakeString(forInsert, OperationType.Insert, options, iteration);
+                SqlOperations sql = new();
+                await sql.RunAsync(ctx, sqlString, forInsert.Count);
             });
             tasks.Add(t);
+            iteration++;
         }
         Task.WaitAll(tasks.ToArray());
+        return true;
     }/// <summary>
      /// Performs bulk insert or records into the database.
      /// </summary>
@@ -304,10 +363,14 @@ public static class DbContextBulkExtensions
      /// <param name="ctx">database context</param>
      /// <param name="data">data to send to the database</param>
      /// <returns></returns>
-    public static void BulkInsert<T>(this DbContext ctx, IList<T> data)
+    public static bool BulkInsert<T>(this DbContext ctx, IList<T> data)
     {
+        if (data.Count == 0)
+        {
+            return true;
+        }
         string[]? keys = GetKeys(data).Result;
-        BulkInsert(ctx, data, options => options.KeyNames = keys);
+        return BulkInsert(ctx, data, options => options.KeyNames = keys);
     }
     #endregion
     #region Delete
@@ -319,8 +382,13 @@ public static class DbContextBulkExtensions
     /// <param name="data"></param>
     /// <param name="bulkOptions"></param>
     /// <returns></returns>
-    public static void BulkDelete<T>(this DbContext ctx, IList<T> data, Action<BulkOptions> bulkOptions)
+    public static bool BulkDelete<T>(this DbContext ctx, IList<T> data, Action<BulkOptions> bulkOptions)
     {
+
+        if (data.Count == 0)
+        {
+            return true;
+        }
         BulkOptions options = new();
         bulkOptions?.Invoke(options);
         if (options.KeyNames == null)
@@ -348,23 +416,32 @@ public static class DbContextBulkExtensions
             }
             Task t = Task.Run(async () =>
             {
-                string sqlString = MakeString(forDelete, OperationType.Delete, options);
-                await SqlOperations.RunAsync(ctx, sqlString, forDelete.Count);
+                Thread.Sleep(new Random().Next(250, 1000));//add random sleep so the concurrent operations don't lock up the database
+                string sqlString = MakeString(forDelete, OperationType.Delete, options, iteration);
+                SqlOperations sql = new();
+                await sql.RunAsync(ctx, sqlString, forDelete.Count);
             });
             tasks.Add(t);
+            iteration++;
         }
         Task.WaitAll(tasks.ToArray());
-    }/// <summary>
-     /// Performs bulk delete of records from the database.
-     /// </summary>
-     /// <typeparam name="T">Generic type param</typeparam>
-     /// <param name="ctx">database context</param>
-     /// <param name="data">data to send to the database</param>
-     /// <returns></returns>
-    public static void BulkDelete<T>(this DbContext ctx, IList<T> data)
+        return true;
+    }
+    /// <summary>
+    /// Performs bulk delete of records from the database.
+    /// </summary>
+    /// <typeparam name="T">Generic type param</typeparam>
+    /// <param name="ctx">database context</param>
+    /// <param name="data">data to send to the database</param>
+    /// <returns></returns>
+    public static bool BulkDelete<T>(this DbContext ctx, IList<T> data)
     {
-        string[]? keys =GetKeys(data).Result;
-        BulkDelete(ctx, data, options => options.KeyNames = keys);
+        if (data.Count == 0)
+        {
+            return true;
+        }
+        string[]? keys = GetKeys(data).Result;
+        return BulkDelete(ctx, data, options => options.KeyNames = keys);
     }
     #endregion
     #endregion
