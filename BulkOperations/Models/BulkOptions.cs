@@ -6,7 +6,7 @@ public class BulkOptions
 {
 	/// <summary>
 	/// How many records to insert/update/delete at a time
-	/// </summary>
+	/// </summary>	
 	public int BatchSize { get; set; } = 1000;
 	/// <summary>
 	/// This is used to get the model name vs the databse name of the column in the class
@@ -31,6 +31,7 @@ public class BulkOptions
 	/// <summary>
 	/// If the model has inedxes that should be used for insertion specify them here.
 	/// <para>Indexes are also used to compare insertion records for if inserted records are not already in the table.</para>
+	/// Also used by the delete &amp; update methods when generating the queries. If not specified here, then make sure the <see cref="System.ComponentModel.DataAnnotations.Schema.IndexAttribute"/> is set in your models.
 	/// </summary>
 	public string[] IndexValues { get; set; }= Array.Empty<string>();
 	/// <summary>
