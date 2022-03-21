@@ -41,9 +41,5 @@ public class BulkOptions
 	/// Only update the data for the specified columns. Default is true.
 	/// </summary>
 	public bool OnlyUpdateSpecifiedColumns { get; set; } = true;
-	/// <summary>
-	/// Automatically truncate strings for fields with values longer than allowed in the database
-	/// </summary>
-	public bool TruncateStrings { get; set; } = false;
 
 }
