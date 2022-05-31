@@ -42,13 +42,13 @@ internal static class SqlStringMaker
                 }
             }
         }
-        sb.Append($"select top (1) * into {tempTable} from {tableName}; delete from {tempTable};").AppendLine();
+        sb.Append($" select top (1) * into {tempTable} from {tableName}; delete from {tempTable};").AppendLine();
         sb.Append($" Insert into {tempTable}").AppendLine();
         sb.Append(GetInsertString(data, columns.ToList()));
         //temp table should have all the data inserted here. now need to merge the temp table and the actual table
         sb.Append(';')
             .AppendLine()
-            .Append($"insert into {tableName} (");
+            .Append($" insert into {tableName} (");
         for (var i = 0; i < columns.Count; i++)
         {
             sb.Append(columns.ElementAt(i).ModelPropName);
@@ -68,7 +68,7 @@ internal static class SqlStringMaker
         }
         sb.Append($" from {tempTable}")
             .AppendLine()
-            .Append("where not exists (select distinct ");
+            .Append(" where not exists (select distinct ");
 
         for (var i = 0; i < columns.Count; i++)
         {
@@ -89,7 +89,7 @@ internal static class SqlStringMaker
                     continue;
                 }
                 sb.Append($"[{tempTable}].[{columns.ElementAt(i).ModelPropName}] = t1.[{columns.ElementAt(i).ModelPropName}]");
-                if (i < columns.Count - 1)
+                if (i < columns.Count - 1 && !options.ColumnsToIgnore.Contains(columns.ElementAt(i+1).ModelPropName))
                 {
                     sb.Append(" and ");
                 }
@@ -98,7 +98,7 @@ internal static class SqlStringMaker
         else
         {
             var indexInfo = GetSpecifiedColumnInfo(data, options.IndexValues);
-            for (var i = 0; i < indexInfo.Count; i++)
+            for (var i = indexInfo.Count; i < indexInfo.Count; i++)
             {
                 if (options.ColumnsToIgnore.Contains(indexInfo[i].ModelPropName))
                 {
@@ -112,7 +112,7 @@ internal static class SqlStringMaker
             }
         }
 
-        sb.Append($");").AppendLine().Append($"DROP table {tempTable}");
+        sb.Append($");").AppendLine().Append($" DROP table {tempTable} ");
         return sb.ToString();
     }
 

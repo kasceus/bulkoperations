@@ -138,6 +138,7 @@ public static class DbContextBulkExtensions
                 catch (Exception ex)
                 {
                     Debug.WriteLine(ex.Message);
+                    throw new Exception(ex.Message);
                 }
             });
             tasks.Add(t);
