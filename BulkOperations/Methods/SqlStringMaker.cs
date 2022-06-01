@@ -42,13 +42,12 @@ internal static class SqlStringMaker
                 }
             }
         }
-        sb.Append($" select top (1) * into {tempTable} from {tableName}; delete from {tempTable};").AppendLine();
-        sb.Append($" Insert into {tempTable}").AppendLine();
+        sb.Append($" select top (1) * into {tempTable} from {tableName}; delete from {tempTable};");
+        sb.Append($"  Insert into {tempTable}");
         sb.Append(GetInsertString(data, columns.ToList()));
         //temp table should have all the data inserted here. now need to merge the temp table and the actual table
         sb.Append(';')
-            .AppendLine()
-            .Append($" insert into {tableName} (");
+            .Append($"  insert into {tableName} (");
         for (var i = 0; i < columns.Count; i++)
         {
             sb.Append(columns.ElementAt(i).ModelPropName);
@@ -67,7 +66,6 @@ internal static class SqlStringMaker
             }
         }
         sb.Append($" from {tempTable}")
-            .AppendLine()
             .Append(" where not exists (select distinct ");
 
         for (var i = 0; i < columns.Count; i++)
@@ -89,16 +87,19 @@ internal static class SqlStringMaker
                     continue;
                 }
                 sb.Append($"[{tempTable}].[{columns.ElementAt(i).ModelPropName}] = t1.[{columns.ElementAt(i).ModelPropName}]");
-                if (i < columns.Count - 1 && !options.ColumnsToIgnore.Contains(columns.ElementAt(i+1).ModelPropName))
+                if (i < columns.Count - 1)
                 {
-                    sb.Append(" and ");
+                    if (!options.ColumnsToIgnore.Contains(columns.ElementAt(i + 1).ModelPropName))
+                        sb.Append(" and ");
+                    else if (!options.ColumnsToIgnore.Contains(columns.ElementAt(i + 2).ModelPropName))
+                        sb.Append(" and ");
                 }
             }
         }
         else
         {
             var indexInfo = GetSpecifiedColumnInfo(data, options.IndexValues);
-            for (var i = indexInfo.Count; i < indexInfo.Count; i++)
+            for (var i = 0; i < indexInfo.Count; i++)
             {
                 if (options.ColumnsToIgnore.Contains(indexInfo[i].ModelPropName))
                 {
@@ -107,12 +108,15 @@ internal static class SqlStringMaker
                 sb.Append($"[{tempTable}].[{indexInfo[i].ModelPropName}] = t1.[{indexInfo[i].ModelPropName}]");
                 if (i < indexInfo.Count - 1)
                 {
-                    sb.Append(" and ");
+                    if (!options.ColumnsToIgnore.Contains(indexInfo[i + 1].ModelPropName))
+                        sb.Append(" and ");
+                    else if (!options.ColumnsToIgnore.Contains(indexInfo[i + 2].ModelPropName))
+                        sb.Append(" and ");
                 }
             }
         }
 
-        sb.Append($");").AppendLine().Append($" DROP table {tempTable} ");
+        sb.Append($");").Append($" DROP table {tempTable} ");
         return sb.ToString();
     }
 
@@ -185,7 +189,6 @@ internal static class SqlStringMaker
                 sb.Append(paramString);
                 first = false;
             }
-            sb.AppendLine();
             sb.Append("where ");
             foreach (var item in data)
             {
@@ -246,7 +249,6 @@ internal static class SqlStringMaker
             throw new ItemPassedAsNullException();
         }
         StringBuilder sb = new();
-        sb.AppendLine();
         sb.Append("when ");
         for (int i = 0; i < keyNames.Length; i++)
         {
@@ -293,30 +295,29 @@ internal static class SqlStringMaker
         }
         sb.Append(") values ");
         Parallel.ForEach(data, row =>
-         {
-             StringBuilder rowString = new();
-             rowString.Append('(');
-             //add the data now
-             for (int i = 0; i < columns.Count; i++)
-             {
-                 rowString.Append('\'');
-                 rowString.Append(GetColumnValue(row, columns[i].ModelPropName));
-                 if (i < columns.Count - 1)
-                 {
-                     rowString.Append("', ");
-                 }
-                 else
-                 {
-                     rowString.Append('\'');
-                 }
-             }
-             rowString.Append("), ");
-             rowString.AppendLine();
-             lock (sb)
-             {
-                 sb.Append(rowString);
-             }
-         });
+        {
+            StringBuilder rowString = new();
+            rowString.Append('(');
+            //add the data now
+            for (int i = 0; i < columns.Count; i++)
+            {
+                rowString.Append('\'');
+                rowString.Append(GetColumnValue(row, columns[i].ModelPropName));
+                if (i < columns.Count - 1)
+                {
+                    rowString.Append("', ");
+                }
+                else
+                {
+                    rowString.Append('\'');
+                }
+            }
+            rowString.Append("), ");
+            lock (sb)
+            {
+                sb.Append(rowString);
+            }
+        });
         if (sb.Length > 2)
         {
             string ret = sb.ToString().Trim();
