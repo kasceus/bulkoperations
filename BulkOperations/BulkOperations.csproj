@@ -6,9 +6,9 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AssemblyName>WDS.BulkOperations</AssemblyName>
-		<Version>1.0.3</Version>
+		<Version>1.0.4</Version>
 		<Product>Entity Framework Bulk Operations</Product>
-		<Authors>Charles Graham</Authors>
+		<Authors>Jordan Parsons</Authors>
 		<Company>30th Signal BN/ US Army</Company>
 		<Description>Performs Bulk upload, insert, and delete operations from the SQL database</Description>
 		<NeutralLanguage>"en-US"</NeutralLanguage>
@@ -19,6 +19,7 @@
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<ProduceReferenceAssembly>True</ProduceReferenceAssembly>
 		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<Copyright>30th Web and Database Services</Copyright>
 	</PropertyGroup>
 
 	<ItemGroup>
