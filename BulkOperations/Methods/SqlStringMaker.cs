@@ -2,6 +2,7 @@
 using BulkOperations.Models;
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
 using System.Text;
@@ -89,10 +90,17 @@ internal static class SqlStringMaker
                 sb.Append($"[{tempTable}].[{columns.ElementAt(i).ModelPropName}] = t1.[{columns.ElementAt(i).ModelPropName}]");
                 if (i < columns.Count - 1)
                 {
-                    if (!options.ColumnsToIgnore.Contains(columns.ElementAt(i + 1).ModelPropName))
-                        sb.Append(" and ");
-                    else if (!options.ColumnsToIgnore.Contains(columns.ElementAt(i + 2).ModelPropName))
-                        sb.Append(" and ");
+
+                    if (TryElementAtOrDefault<ColumnKeyInfo>(columns, i + 1, out ColumnKeyInfo test))
+                    {
+                        if (!options.ColumnsToIgnore.Contains(columns.ElementAt(i + 1).ModelPropName))
+                            sb.Append(" and ");
+                    }
+                    else if (TryElementAtOrDefault<ColumnKeyInfo>(columns, i + 2, out test))
+                    {
+                        if (!options.ColumnsToIgnore.Contains(columns.ElementAt(i + 2).ModelPropName))
+                            sb.Append(" and ");
+                    }
                 }
             }
         }
@@ -108,16 +116,49 @@ internal static class SqlStringMaker
                 sb.Append($"[{tempTable}].[{indexInfo[i].ModelPropName}] = t1.[{indexInfo[i].ModelPropName}]");
                 if (i < indexInfo.Count - 1)
                 {
-                    if (!options.ColumnsToIgnore.Contains(indexInfo[i + 1].ModelPropName))
-                        sb.Append(" and ");
-                    else if (!options.ColumnsToIgnore.Contains(indexInfo[i + 2].ModelPropName))
-                        sb.Append(" and ");
+                    if (TryElementAtOrDefault<ColumnKeyInfo>(indexInfo, i + 1, out ColumnKeyInfo test))
+                    {
+                        if (!options.ColumnsToIgnore.Contains(indexInfo[i + 1].ModelPropName))
+                            sb.Append(" and ");
+                    }
+                    else if (TryElementAtOrDefault<ColumnKeyInfo>(indexInfo, i + 2, out test))
+                    {
+                        if (!options.ColumnsToIgnore.Contains(indexInfo[i + 2].ModelPropName))
+                            sb.Append(" and ");
+                    }
                 }
             }
         }
 
         sb.Append($");").Append($" DROP table {tempTable} ");
         return sb.ToString();
+    }
+
+    public static bool TryElementAtOrDefault<T>(IEnumerable<T> source, int index, out T value)
+    {
+        value = default;
+        if (index < 0 || source == null || source.Any() == false) return false;
+
+        if (source is IList<T> list && index < list.Count)
+        {
+            value = list[index];
+            return true;
+        }
+
+        using (var e = source.GetEnumerator())
+        {
+            while (e.MoveNext())
+            {
+                if (index == 0)
+                {
+                    value = e.Current;
+                    return true;
+                }
+                index--;
+            }
+        }
+
+        return false;
     }
 
     internal static string MakeString<T>(IList<T> data, OperationType operationType, BulkOptions options, int iteration)
